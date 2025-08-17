@@ -1,0 +1,2059 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patrick, Lachlan and Eve's Astro Explorer Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Comic Sans MS', 'Arial Rounded MT Bold', sans-serif;
+            background: #000;
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        #gameCanvas {
+            display: block;
+            background: radial-gradient(ellipse at center, #1a1a3a 0%, #0a0a2e 50%, #050520 100%);
+        }
+
+        /* Welcome Screen */
+        .welcome-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a1a3a, #0a0a2e);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .welcome-content {
+            text-align: center;
+            background: rgba(0,0,0,0.8);
+            padding: 40px;
+            border-radius: 30px;
+            border: 4px solid #ff6b6b;
+            max-width: 500px;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .welcome-content h1 {
+            font-size: 48px;
+            color: #4ecdc4;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .name-input {
+            font-size: 24px;
+            padding: 15px;
+            border-radius: 20px;
+            border: 3px solid #4ecdc4;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            text-align: center;
+            margin: 20px 0;
+            width: 300px;
+        }
+
+        .start-button {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            border: none;
+            padding: 20px 40px;
+            border-radius: 30px;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .start-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 30px rgba(255,107,107,0.8);
+        }
+
+        .start-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* UI Overlay */
+        .ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+            display: none;
+        }
+
+        /* Player Info - 30% larger */
+        .player-info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.9);
+            padding: 23px;
+            border-radius: 23px;
+            border: 3px solid #ff6b6b;
+            pointer-events: auto;
+            font-size: 23px;
+            min-width: 312px;
+        }
+
+        .player-name {
+            color: #4ecdc4;
+            font-size: 29px;
+            margin-bottom: 10px;
+        }
+
+        .score {
+            color: #ffff00;
+            font-size: 23px;
+            margin-bottom: 7px;
+        }
+
+        /* Planet Info Box - 35% larger and wider */
+        .planet-info-box {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 680px;
+            background: rgba(0,0,0,0.9);
+            padding: 15px 25px;
+            border-radius: 20px;
+            border: 3px solid #4ecdc4;
+            pointer-events: auto;
+            text-align: center;
+            display: none;
+        }
+
+        .planet-name {
+            color: #4ecdc4;
+            font-size: 26px;
+            margin-bottom: 12px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            transition: color 0.3s ease;
+        }
+
+        .planet-name.in-range {
+            color: #00ff00;
+            text-shadow: 0 0 10px rgba(0,255,0,0.8);
+        }
+
+        .planet-facts {
+            font-size: 15px;
+            line-height: 1.3;
+            color: #ffffff;
+            margin-bottom: 15px;
+            text-align: left;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 12px;
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-direction: row;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .action-button {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            border: none;
+            padding: 12px 20px;
+            border-radius: 18px;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .action-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(255,107,107,0.8);
+        }
+
+        /* Weight Calculator - 25% smaller, closer to edge */
+        .weight-calculator {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.85);
+            padding: 12px;
+            border-radius: 12px;
+            border: 2px solid #ffff00;
+            pointer-events: auto;
+            width: 220px;
+            display: none;
+        }
+
+        .weight-calculator h3 {
+            color: #ffff00;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .weight-input {
+            font-size: 12px;
+            padding: 6px;
+            border-radius: 8px;
+            border: 2px solid #ffff00;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            width: 100%;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .calculate-button {
+            background: #ffff00;
+            color: #000;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+
+        .calculate-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(255,255,0,0.8);
+        }
+
+        .weight-results {
+            margin-top: 8px;
+            font-size: 11px;
+            line-height: 1.3;
+        }
+
+        /* Controls - 25% larger again */
+        .controls-help {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.9);
+            padding: 12px 18px;
+            border-radius: 15px;
+            font-size: 14px;
+            border: 3px solid #00ff00;
+            text-align: left;
+            pointer-events: auto;
+            max-width: 240px;
+            line-height: 1.4;
+        }
+
+        /* Audio Controls - 25% larger again */
+        .audio-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.9);
+            padding: 12px 20px;
+            border-radius: 18px;
+            border: 3px solid #ff00ff;
+            pointer-events: auto;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            font-size: 16px;
+        }
+        
+        /* Navigation Controls - 25% larger again */
+        .nav-controls {
+            position: absolute;
+            top: 100px;
+            right: 10px;
+            background: rgba(0,0,0,0.9);
+            padding: 12px;
+            border-radius: 18px;
+            border: 3px solid #00ff00;
+            pointer-events: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .nav-button {
+            background: #00ff00;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 15px;
+            color: #000;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+        
+        .nav-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(0,255,0,0.6);
+        }
+        
+        .reset-button {
+            background: #ff6b6b;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 15px;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+        
+        .reset-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(255,107,107,0.6);
+        }
+
+        .audio-button {
+            background: #ff00ff;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 12px;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .audio-button:hover {
+            transform: scale(1.1);
+        }
+
+        /* Planet Surface View */
+        .surface-view {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: none;
+            z-index: 500;
+        }
+
+        .surface-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            background: rgba(0,0,0,0.9);
+            padding: 25px;
+            border-radius: 20px;
+            border: 3px solid #4ecdc4;
+            width: 90%;
+            max-width: 1200px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .surface-image {
+            width: 100%;
+            max-width: 800px;
+            height: 250px;
+            background: #222;
+            border-radius: 15px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: #666;
+        }
+
+        .mini-game {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+        }
+
+        .quiz-question {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #4ecdc4;
+        }
+
+        .quiz-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 10px;
+        }
+
+        .quiz-option {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            border: none;
+            padding: 15px;
+            border-radius: 20px;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .quiz-option:hover {
+            transform: scale(1.05);
+        }
+
+        .back-to-space {
+            background: #ff6b6b;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .back-to-space:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(255,107,107,0.8);
+        }
+
+        /* Achievement Popup */
+        .achievement {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #ff6b6b, #4ecdc4, #ffff00);
+            padding: 40px;
+            border-radius: 30px;
+            text-align: center;
+            font-size: 28px;
+            font-weight: bold;
+            display: none;
+            box-shadow: 0 0 60px rgba(255,107,107,0.8);
+            z-index: 1000;
+            animation: bounce 1s ease-in-out;
+        }
+        
+        /* Range Indicator - with pop-up animation */
+        .range-indicator {
+            position: absolute;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: rgba(0, 255, 0, 0.9);
+            padding: 20px 40px;
+            border-radius: 30px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #000;
+            display: none;
+            z-index: 200;
+            animation: pulse 1s ease-in-out infinite;
+            transition: transform 0.4s ease-out;
+        }
+
+        .range-indicator.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translate(-50%, -50%); }
+            40% { transform: translate(-50%, -60%); }
+            60% { transform: translate(-50%, -55%); }
+        }
+
+        /* Particle Effects */
+        .stars {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .star {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: white;
+            animation: twinkle 3s infinite;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Welcome Screen -->
+    <div class="welcome-screen" id="welcomeScreen">
+        <div class="welcome-content">
+            <h1>🚀 Patrick, Lachlan and Eve's<br>Astro Explorer Game! 🌟</h1>
+            <p style="font-size: 20px; margin-bottom: 20px;">Ready for an amazing journey through our Solar System?</p>
+            <input type="text" class="name-input" id="playerNameInput" placeholder="Enter your name!" maxlength="20">
+            <br>
+            <button class="start-button" id="startButton" disabled>Start Adventure!</button>
+        </div>
+    </div>
+
+    <!-- Main Game Canvas -->
+    <canvas id="gameCanvas"></canvas>
+    
+    <!-- UI Overlay -->
+    <div class="ui-overlay" id="gameUI">
+        <!-- Player Info -->
+        <div class="player-info">
+            <div class="player-name">👨‍🚀 <span id="playerNameDisplay">Explorer</span></div>
+            <div class="score">⭐ Planets Visited: <span id="planetsVisited">0</span>/9</div>
+            <div class="score">🏆 Knowledge Points: <span id="knowledgePoints">0</span></div>
+        </div>
+
+        <!-- Audio Controls -->
+        <div class="audio-controls">
+            <span>🎵 Music & Sounds:</span>
+            <button class="audio-button" id="toggleMusic">🎵</button>
+            <button class="audio-button" id="toggleSounds">🔊</button>
+        </div>
+        
+        <!-- Navigation Controls -->
+        <div class="nav-controls">
+            <button class="nav-button" id="flyToSun">☀️ Fly Back to Sun</button>
+            <button class="reset-button" id="resetGame">🔄 Reset Game</button>
+        </div>
+
+        <!-- Planet Info Box -->
+        <div class="planet-info-box" id="planetInfoBox">
+            <div class="planet-name" id="planetName">Select a Planet!</div>
+            <div class="planet-facts" id="planetFacts"></div>
+            <div class="action-buttons">
+                <button class="action-button" id="landButton">🛸 Land on Planet!</button>
+                <button class="action-button" id="learnMoreButton">📚 Learn More!</button>
+            </div>
+        </div>
+
+        <!-- Weight Calculator -->
+        <div class="weight-calculator" id="weightCalculator">
+            <h3>⚖️ Space Weight Calculator!</h3>
+            <input type="number" class="weight-input" id="weightInput" placeholder="Your weight on Earth (lbs)" min="1" max="500">
+            <button class="calculate-button" id="calculateWeight">Calculate!</button>
+            <div class="weight-results" id="weightResults"></div>
+        </div>
+
+        <!-- Controls Help -->
+        <div class="controls-help">
+            <div style="font-weight: bold; margin-bottom: 8px; color: #00ff00;">🎮 Controls:</div>
+            • Arrow Keys or WASD to fly<br>
+            • Click planets to explore<br>
+            • Space to boost! 🚀
+        </div>
+    </div>
+
+    <!-- Planet Surface View -->
+    <div class="surface-view" id="surfaceView">
+        <div class="surface-content">
+            <h2 id="surfaceTitle" style="color: #4ecdc4; font-size: 36px; margin-bottom: 20px;">Exploring Planet!</h2>
+            <div class="surface-image" id="surfaceImage">
+                🌍 Planet Surface View
+            </div>
+            <div class="mini-game" id="miniGame">
+                <div class="quiz-question" id="quizQuestion">Loading fun facts...</div>
+                <div class="quiz-options" id="quizOptions"></div>
+            </div>
+            <div style="margin-top: 20px; padding: 20px; background: rgba(255,255,255,0.1); border-radius: 15px;">
+                <h3 style="color: #ffff00; margin-bottom: 15px;">⚖️ Weight Calculator</h3>
+                <div style="display: flex; gap: 10px; justify-content: center; align-items: center;">
+                    <input type="number" id="surfaceWeightInput" placeholder="Your Earth weight (lbs)" style="padding: 10px; border-radius: 10px; border: 2px solid #ffff00; background: rgba(255,255,255,0.1); color: white; width: 150px;">
+                    <button onclick="calculateSurfaceWeight()" style="background: #ffff00; color: #000; border: none; padding: 10px 20px; border-radius: 10px; font-weight: bold; cursor: pointer;">Calculate!</button>
+                </div>
+                <div id="surfaceWeightResult" style="margin-top: 15px; color: #4ecdc4; font-size: 20px;"></div>
+            </div>
+            <button class="back-to-space" id="backToSpace">🚀 Back to Space!</button>
+        </div>
+    </div>
+
+    <!-- Achievement Popup -->
+    <div class="achievement" id="achievementPopup">
+        <div id="achievementText">🎉 Amazing Discovery! 🎉</div>
+    </div>
+    
+    <!-- Range Indicator -->
+    <div class="range-indicator" id="rangeIndicator">
+        🚀 You're in range! Press SPACE BAR to land on <span id="rangePlanetName">Planet</span>! 🛸
+    </div>
+
+    <!-- Audio Elements - Using Web Audio API for better browser compatibility -->
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Game State
+        let scene, camera, renderer;
+        let playerName = "Explorer";
+        let spaceship;
+        let planets = [];
+        let sun;
+        let currentPlanet = null;
+        let gameMode = 'welcome'; // 'welcome', 'space', 'surface'
+        
+        // Player Stats
+        let visitedPlanets = new Set();
+        let knowledgePoints = 0;
+        let playerEarthWeight = 154; // default weight in pounds
+        
+        // Audio
+        let musicEnabled = true;
+        let soundsEnabled = true;
+        let audioContext;
+        let musicGainNode;
+        let soundGainNode;
+        
+        // Controls
+        let keys = {};
+        let velocity = new THREE.Vector3();
+        const moveSpeed = 0.15;
+        const boostSpeed = 0.3;
+        
+        // Planet Data - Arranged in a semicircle with larger spacing
+        const planetData = {
+            sun: {
+                name: "Sun ☀️",
+                size: 6,
+                position: [0, 0, -40],
+                color: 0xFFD700,
+                emissive: 0xFFAA00,
+                emissiveIntensity: 0.8,
+                facts: [
+                    "The Sun is a star, not a planet!",
+                    "It's made of super hot gas called plasma",
+                    "The Sun is 1 million times bigger than Earth!",
+                    "Light from the Sun takes 8 minutes to reach Earth"
+                ],
+                gravity: 27.01,
+                quizzes: [
+                    {
+                        question: "What is the Sun made of?",
+                        options: ["Hot gas", "Rock", "Water", "Ice"],
+                        correct: 0
+                    },
+                    {
+                        question: "How long does light from the Sun take to reach Earth?",
+                        options: ["8 minutes", "8 seconds", "8 hours", "8 days"],
+                        correct: 0
+                    },
+                    {
+                        question: "How old is the Sun?",
+                        options: ["4.6 billion years", "1 million years", "100 years", "1 billion years"],
+                        correct: 0
+                    },
+                    {
+                        question: "How many Earths could fit inside the Sun?",
+                        options: ["1.3 million", "100", "1,000", "100,000"],
+                        correct: 0
+                    }
+                ],
+                surfaceColor: "#FFD700"
+            },
+            mercury: {
+                name: "Mercury",
+                size: 1.2,
+                position: [30, 0, -30],
+                color: 0xB8860B,
+                emissive: 0x8B7355,
+                emissiveIntensity: 0.1,
+                facts: [
+                    "Mercury is the smallest planet!",
+                    "A day on Mercury lasts 59 Earth days",
+                    "Mercury has no atmosphere to breathe",
+                    "It's the closest planet to the Sun"
+                ],
+                gravity: 0.378,
+                quizzes: [
+                    {
+                        question: "Is Mercury hot or cold?",
+                        options: ["Both! Very hot and very cold", "Only hot", "Only cold", "Just right"],
+                        correct: 0
+                    },
+                    {
+                        question: "How long is a day on Mercury?",
+                        options: ["59 Earth days", "24 hours", "1 Earth day", "1 year"],
+                        correct: 0
+                    },
+                    {
+                        question: "Which planet is closest to the Sun?",
+                        options: ["Mercury", "Venus", "Earth", "Mars"],
+                        correct: 0
+                    },
+                    {
+                        question: "Does Mercury have an atmosphere?",
+                        options: ["No, it's too small", "Yes, thick like Venus", "Yes, like Earth", "Only at night"],
+                        correct: 0
+                    }
+                ],
+                surfaceColor: "#B8860B"
+            },
+            venus: {
+                name: "Venus",
+                size: 1.8,
+                position: [50, 0, -20],
+                color: 0xFFA500,
+                emissive: 0xFF8C00,
+                emissiveIntensity: 0.2,
+                facts: [
+                    "Venus is the hottest planet!",
+                    "It rains acid on Venus - yikes!",
+                    "Venus spins backwards",
+                    "A day on Venus is longer than its year!"
+                ],
+                gravity: 0.907,
+                quizzes: [
+                    {
+                        question: "Why is Venus so hot?",
+                        options: ["Thick clouds trap heat", "It's on fire", "Too close to Sun", "Has lava oceans"],
+                        correct: 0
+                    },
+                    {
+                        question: "What rains on Venus?",
+                        options: ["Acid", "Water", "Ice", "Fire"],
+                        correct: 0
+                    },
+                    {
+                        question: "Which direction does Venus spin?",
+                        options: ["Backwards", "Forward", "Sideways", "It doesn't spin"],
+                        correct: 0
+                    },
+                    {
+                        question: "Is a day longer than a year on Venus?",
+                        options: ["Yes!", "No", "They're the same", "Only in summer"],
+                        correct: 0
+                    }
+                ],
+                surfaceColor: "#FFA500"
+            },
+            earth: {
+                name: "Earth 🌍",
+                size: 2.0,
+                position: [60, 0, 0],
+                color: 0x4169E1,
+                emissive: 0x1E90FF,
+                emissiveIntensity: 0.1,
+                facts: [
+                    "Earth is the only planet with life!",
+                    "71% of Earth is covered in water",
+                    "Earth has one moon",
+                    "We live here! Hello neighbor!"
+                ],
+                gravity: 1.0,
+                quizzes: [
+                    {
+                        question: "What makes Earth special?",
+                        options: ["It has life!", "It's the biggest", "It's the hottest", "It has rings"],
+                        correct: 0
+                    },
+                    {
+                        question: "How much of Earth is covered in water?",
+                        options: ["71%", "50%", "25%", "90%"],
+                        correct: 0
+                    },
+                    {
+                        question: "How many moons does Earth have?",
+                        options: ["1", "2", "4", "0"],
+                        correct: 0
+                    },
+                    {
+                        question: "What do we call our home planet?",
+                        options: ["Earth", "Terra", "The Blue Planet", "All of these!"],
+                        correct: 3
+                    }
+                ],
+                surfaceColor: "#4169E1"
+            },
+            mars: {
+                name: "Mars",
+                size: 1.5,
+                position: [50, 0, 20],
+                color: 0xFF6347,
+                emissive: 0xCD5C5C,
+                emissiveIntensity: 0.1,
+                facts: [
+                    "Mars is called the Red Planet!",
+                    "Mars has the biggest volcano in the solar system",
+                    "A day on Mars is almost like Earth - 24.6 hours",
+                    "Mars has two tiny moons"
+                ],
+                gravity: 0.377,
+                quizzes: [
+                    {
+                        question: "Why is Mars red?",
+                        options: ["Rusty iron in soil", "It's hot", "Red paint", "Fire"],
+                        correct: 0
+                    },
+                    {
+                        question: "How many moons does Mars have?",
+                        options: ["2", "1", "4", "0"],
+                        correct: 0
+                    },
+                    {
+                        question: "How long is a day on Mars?",
+                        options: ["24.6 hours", "12 hours", "48 hours", "1 week"],
+                        correct: 0
+                    },
+                    {
+                        question: "What is Mars' biggest volcano called?",
+                        options: ["Olympus Mons", "Mount Mars", "Red Mountain", "Fire Peak"],
+                        correct: 0
+                    }
+                ],
+                surfaceColor: "#FF6347"
+            },
+            jupiter: {
+                name: "Jupiter",
+                size: 5.0,
+                position: [30, 0, 30],
+                color: 0xFFD4A3,
+                emissive: 0xD2691E,
+                emissiveIntensity: 0.05,
+                facts: [
+                    "Jupiter is the BIGGEST planet!",
+                    "Jupiter has a giant storm called the Great Red Spot",
+                    "It has at least 80 moons!",
+                    "Jupiter is made of gas - you can't stand on it!"
+                ],
+                gravity: 2.36,
+                quizzes: [
+                    {
+                        question: "How many Earths could fit inside Jupiter?",
+                        options: ["Over 1,000!", "10", "100", "50"],
+                        correct: 0
+                    },
+                    {
+                        question: "What is Jupiter's Great Red Spot?",
+                        options: ["A giant storm", "A mountain", "A moon", "A crater"],
+                        correct: 0
+                    },
+                    {
+                        question: "About how many moons does Jupiter have?",
+                        options: ["Over 80", "1", "12", "None"],
+                        correct: 0
+                    },
+                    {
+                        question: "What is Jupiter mostly made of?",
+                        options: ["Gas", "Rock", "Water", "Ice"],
+                        correct: 0
+                    }
+                ],
+                surfaceColor: "#FFD4A3"
+            },
+            saturn: {
+                name: "Saturn",
+                size: 4.5,
+                position: [0, 0, 40],
+                color: 0xF0E68C,
+                emissive: 0xDAA520,
+                emissiveIntensity: 0.05,
+                facts: [
+                    "Saturn has the most amazing rings!",
+                    "The rings are made of ice and rock",
+                    "Saturn could float in water!",
+                    "It has 83 known moons"
+                ],
+                gravity: 0.916,
+                quizzes: [
+                    {
+                        question: "What are Saturn's rings made of?",
+                        options: ["Ice and rock", "Gold", "Clouds", "Dust only"],
+                        correct: 0
+                    },
+                    {
+                        question: "Could Saturn float in water?",
+                        options: ["Yes!", "No", "Only the rings", "Only in space"],
+                        correct: 0
+                    },
+                    {
+                        question: "How many known moons does Saturn have?",
+                        options: ["83", "1", "12", "200"],
+                        correct: 0
+                    },
+                    {
+                        question: "What makes Saturn's rings so visible?",
+                        options: ["They're huge and bright", "They glow", "They're on fire", "Magic"],
+                        correct: 0
+                    }
+                ],
+                surfaceColor: "#F0E68C"
+            },
+            uranus: {
+                name: "Uranus",
+                size: 3.0,
+                position: [-30, 0, 30],
+                color: 0x40E0D0,
+                emissive: 0x00CED1,
+                emissiveIntensity: 0.1,
+                facts: [
+                    "Uranus spins on its side!",
+                    "It's a beautiful blue-green color",
+                    "Uranus has faint rings too",
+                    "A year on Uranus is 84 Earth years!"
+                ],
+                gravity: 0.889,
+                quizzes: [
+                    {
+                        question: "What makes Uranus special?",
+                        options: ["It spins sideways", "It's the hottest", "It has no moons", "It's made of rock"],
+                        correct: 0
+                    },
+                    {
+                        question: "What color is Uranus?",
+                        options: ["Blue-green", "Red", "Yellow", "Purple"],
+                        correct: 0
+                    },
+                    {
+                        question: "How long is a year on Uranus?",
+                        options: ["84 Earth years", "1 Earth year", "10 Earth years", "365 days"],
+                        correct: 0
+                    },
+                    {
+                        question: "Does Uranus have rings?",
+                        options: ["Yes, faint ones", "No rings at all", "Bright rings like Saturn", "Only in winter"],
+                        correct: 0
+                    }
+                ],
+                surfaceColor: "#40E0D0"
+            },
+            neptune: {
+                name: "Neptune",
+                size: 2.8,
+                position: [-50, 0, 20],
+                color: 0x1E90FF,
+                emissive: 0x0000CD,
+                emissiveIntensity: 0.1,
+                facts: [
+                    "Neptune has the fastest winds in the solar system!",
+                    "It's a beautiful deep blue color",
+                    "Neptune is the farthest planet from the Sun",
+                    "It takes 165 years to orbit the Sun!"
+                ],
+                gravity: 1.13,
+                quizzes: [
+                    {
+                        question: "How fast are Neptune's winds?",
+                        options: ["1,200 mph!", "10 mph", "100 mph", "50 mph"],
+                        correct: 0
+                    },
+                    {
+                        question: "What color is Neptune?",
+                        options: ["Deep blue", "Green", "Red", "Purple"],
+                        correct: 0
+                    },
+                    {
+                        question: "How long does Neptune take to orbit the Sun?",
+                        options: ["165 years", "1 year", "10 years", "50 years"],
+                        correct: 0
+                    },
+                    {
+                        question: "Which planet is farthest from the Sun?",
+                        options: ["Neptune", "Uranus", "Saturn", "Pluto"],
+                        correct: 0
+                    }
+                ],
+                surfaceColor: "#1E90FF"
+            }
+        };
+
+        // Initialize the game
+        function init() {
+            setupWelcomeScreen();
+            initAudio();
+            setupEventListeners();
+        }
+        
+        // Initialize Web Audio API
+        function initAudio() {
+            try {
+                window.AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioContext = new AudioContext();
+                
+                // Create gain nodes for volume control
+                musicGainNode = audioContext.createGain();
+                soundGainNode = audioContext.createGain();
+                
+                musicGainNode.connect(audioContext.destination);
+                soundGainNode.connect(audioContext.destination);
+                
+                musicGainNode.gain.value = 0.3;
+                soundGainNode.gain.value = 0.5;
+            } catch (e) {
+                console.log('Web Audio API not supported');
+            }
+        }
+
+        function setupWelcomeScreen() {
+            const nameInput = document.getElementById('playerNameInput');
+            const startButton = document.getElementById('startButton');
+            
+            nameInput.addEventListener('input', (e) => {
+                if (e.target.value.trim().length > 0) {
+                    startButton.disabled = false;
+                } else {
+                    startButton.disabled = true;
+                }
+            });
+            
+            startButton.addEventListener('click', startGame);
+            nameInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !startButton.disabled) {
+                    startGame();
+                }
+            });
+        }
+
+        function startGame() {
+            playerName = document.getElementById('playerNameInput').value.trim() || "Explorer";
+            document.getElementById('playerNameDisplay').textContent = playerName;
+            
+            // Hide welcome screen
+            document.getElementById('welcomeScreen').style.display = 'none';
+            document.getElementById('gameUI').style.display = 'block';
+            
+            // Play start sound
+            playSound('start');
+            
+            // Initialize 3D scene
+            init3DScene();
+            
+            // Start background music
+            playBackgroundMusic();
+            
+            gameMode = 'space';
+            
+            // Show welcome message
+            showAchievement(`Welcome to space, ${playerName}! 🚀`);
+        }
+
+        function init3DScene() {
+            // Create scene
+            scene = new THREE.Scene();
+            scene.fog = new THREE.Fog(0x0a0a2e, 100, 300);
+            
+            // Create camera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 12, 35);
+            camera.lookAt(0, 0, 0);
+            
+            // Create renderer
+            const canvas = document.getElementById('gameCanvas');
+            renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            
+            // Add lighting - brighter for better visibility
+            const ambientLight = new THREE.AmbientLight(0x606080, 0.8);
+            scene.add(ambientLight);
+            
+            // Directional light for better planet visibility
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
+            dirLight.position.set(5, 10, 5);
+            scene.add(dirLight);
+            
+            // Point light at sun
+            const sunLight = new THREE.PointLight(0xffff88, 2, 200);
+            sunLight.position.set(0, 0, -20);
+            sunLight.castShadow = true;
+            scene.add(sunLight);
+            
+            // Create stars
+            createStarfield();
+            
+            // Create solar system
+            createSolarSystem();
+            
+            // Create spaceship
+            createSpaceship();
+            
+            // Start animation loop
+            animate();
+        }
+
+        function createStarfield() {
+            const starsGeometry = new THREE.BufferGeometry();
+            const starCount = 5000;
+            const positions = new Float32Array(starCount * 3);
+            const colors = new Float32Array(starCount * 3);
+            
+            for (let i = 0; i < starCount * 3; i += 3) {
+                // Position
+                positions[i] = (Math.random() - 0.5) * 400;
+                positions[i + 1] = (Math.random() - 0.5) * 400;
+                positions[i + 2] = (Math.random() - 0.5) * 400;
+                
+                // Color (white to yellow tint)
+                const color = new THREE.Color();
+                color.setHSL(60 * Math.random() / 360, 0.5, 0.5 + Math.random() * 0.5);
+                colors[i] = color.r;
+                colors[i + 1] = color.g;
+                colors[i + 2] = color.b;
+            }
+            
+            starsGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            starsGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            
+            const starsMaterial = new THREE.PointsMaterial({
+                size: 1,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.8
+            });
+            
+            const stars = new THREE.Points(starsGeometry, starsMaterial);
+            scene.add(stars);
+        }
+
+        function createSolarSystem() {
+            Object.keys(planetData).forEach(key => {
+                const data = planetData[key];
+                
+                // Create planet sphere
+                const geometry = new THREE.SphereGeometry(data.size, 32, 32);
+                const material = new THREE.MeshPhongMaterial({
+                    color: data.color,
+                    emissive: data.emissive || data.color,
+                    emissiveIntensity: data.emissiveIntensity || 0.2,
+                    shininess: 100
+                });
+                
+                const planet = new THREE.Mesh(geometry, material);
+                planet.position.set(...data.position);
+                planet.castShadow = true;
+                planet.receiveShadow = true;
+                planet.userData = { type: key, data: data };
+                
+                // Add glow effect for sun
+                if (key === 'sun') {
+                    sun = planet;
+                    const glowGeometry = new THREE.SphereGeometry(data.size * 1.3, 32, 32);
+                    const glowMaterial = new THREE.MeshBasicMaterial({
+                        color: 0xffff00,
+                        transparent: true,
+                        opacity: 0.4
+                    });
+                    const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+                    planet.add(glow);
+                    
+                    // Add sun rays
+                    const rayGeometry = new THREE.SphereGeometry(data.size * 1.5, 16, 16);
+                    const rayMaterial = new THREE.MeshBasicMaterial({
+                        color: 0xffff00,
+                        transparent: true,
+                        opacity: 0.2,
+                        wireframe: true
+                    });
+                    const rays = new THREE.Mesh(rayGeometry, rayMaterial);
+                    planet.add(rays);
+                }
+                
+                // Add rings to Saturn
+                if (key === 'saturn') {
+                    const ringGeometry = new THREE.RingGeometry(data.size * 1.2, data.size * 2, 64);
+                    const ringMaterial = new THREE.MeshPhongMaterial({
+                        color: 0xffe4b5,
+                        side: THREE.DoubleSide,
+                        transparent: true,
+                        opacity: 0.8,
+                        emissive: 0xffd700,
+                        emissiveIntensity: 0.1
+                    });
+                    const rings = new THREE.Mesh(ringGeometry, ringMaterial);
+                    rings.rotation.x = Math.PI / 2.2;
+                    planet.add(rings);
+                }
+                
+                // Add label sprite for better visibility
+                const labelCanvas = document.createElement('canvas');
+                const context = labelCanvas.getContext('2d');
+                labelCanvas.width = 512;
+                labelCanvas.height = 128;
+                context.font = 'Bold 60px Arial';
+                context.fillStyle = 'white';
+                context.strokeStyle = 'black';
+                context.lineWidth = 4;
+                context.textAlign = 'center';
+                context.strokeText(data.name.split(' ')[0], 256, 80);
+                context.fillText(data.name.split(' ')[0], 256, 80);
+                
+                const labelTexture = new THREE.CanvasTexture(labelCanvas);
+                const labelMaterial = new THREE.SpriteMaterial({ map: labelTexture });
+                const label = new THREE.Sprite(labelMaterial);
+                label.position.y = data.size + 3;
+                label.scale.set(8, 2, 1);
+                planet.add(label);
+                
+                scene.add(planet);
+                planets.push(planet);
+            });
+        }
+
+        function createSpaceship() {
+            const shipGroup = new THREE.Group();
+            
+            // Main body (cone) - doubled size
+            const bodyGeometry = new THREE.ConeGeometry(1.0, 4, 8);
+            const bodyMaterial = new THREE.MeshPhongMaterial({
+                color: 0x4ecdc4,
+                emissive: 0x4ecdc4,
+                emissiveIntensity: 0.2
+            });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.rotation.x = Math.PI / 2;
+            shipGroup.add(body);
+            
+            // Cockpit (sphere) - doubled size
+            const cockpitGeometry = new THREE.SphereGeometry(0.6, 16, 16);
+            const cockpitMaterial = new THREE.MeshPhongMaterial({
+                color: 0x87ceeb,
+                transparent: true,
+                opacity: 0.8
+            });
+            const cockpit = new THREE.Mesh(cockpitGeometry, cockpitMaterial);
+            cockpit.position.z = 1.0;
+            shipGroup.add(cockpit);
+            
+            // Thrusters - doubled size
+            const thrusterGeometry = new THREE.CylinderGeometry(0.4, 0.2, 1.0, 8);
+            const thrusterMaterial = new THREE.MeshBasicMaterial({
+                color: 0xff6b6b,
+                emissive: 0xff6b6b,
+                emissiveIntensity: 1
+            });
+            
+            const thruster1 = new THREE.Mesh(thrusterGeometry, thrusterMaterial);
+            thruster1.position.set(0.6, 0, -1.6);
+            shipGroup.add(thruster1);
+            
+            const thruster2 = new THREE.Mesh(thrusterGeometry, thrusterMaterial);
+            thruster2.position.set(-0.6, 0, -1.6);
+            shipGroup.add(thruster2);
+            
+            // Position spaceship
+            shipGroup.position.set(0, 2, 20);
+            
+            spaceship = shipGroup;
+            scene.add(spaceship);
+        }
+        
+        // Calculate weight on current planet surface
+        function calculateSurfaceWeight() {
+            const input = document.getElementById('surfaceWeightInput');
+            const weight = parseFloat(input.value);
+            
+            if (!weight || weight <= 0) {
+                document.getElementById('surfaceWeightResult').innerHTML = 
+                    '<span style="color: #ff6b6b;">Please enter your weight first!</span>';
+                return;
+            }
+            
+            if (!currentPlanet) return;
+            
+            const planetGravity = currentPlanet.userData.data.gravity;
+            const planetWeight = (weight * planetGravity).toFixed(1);
+            const planetName = currentPlanet.userData.data.name;
+            
+            let message = `On ${planetName}, you would weigh <strong>${planetWeight} lbs</strong>!<br>`;
+            
+            if (planetGravity < 0.5) {
+                message += "You'd feel super light and could jump really high! 🦘";
+            } else if (planetGravity > 1.5) {
+                message += "You'd feel much heavier here - walking would be hard! 🏋️";
+            } else if (planetGravity < 1) {
+                message += "You'd feel a bit lighter than on Earth! 🎈";
+            } else {
+                message += "It would feel similar to Earth! 🌍";
+            }
+            
+            document.getElementById('surfaceWeightResult').innerHTML = message;
+            playSound('click');
+        }
+
+        // Audio Functions
+        function playBackgroundMusic() {
+            if (!audioContext || !musicEnabled) return;
+            
+            // 20-second sci-fi ambient soundtrack
+            let beatCount = 0;
+            let musicInterval;
+            
+            // Extended bass progression (20 seconds at 120 BPM = 40 beats)
+            const bassProgression = [
+                110, 0, 110, 146.83, 130.81, 0, 110, 0,     // Bars 1-2: Am-D-C-Am
+                98, 0, 98, 130.81, 146.83, 0, 98, 0,        // Bars 3-4: G-C-D-G
+                87.3, 0, 87.3, 110, 130.81, 0, 87.3, 0,     // Bars 5-6: F-Am-C-F
+                110, 0, 146.83, 130.81, 110, 0, 110, 0      // Bars 7-8: Am-D-C-Am
+            ];
+            
+            // Evolving melody patterns
+            const melodyPatterns = [
+                [220, 261.63, 329.63, 392],         // Pattern 1: A-C-E-G
+                [196, 246.94, 293.66, 349.23],     // Pattern 2: G-B-D-F
+                [174.61, 220, 261.63, 329.63],     // Pattern 3: F-A-C-E
+                [261.63, 329.63, 392, 466.16]      // Pattern 4: C-E-G-B
+            ];
+            
+            // Chord progressions for pads
+            const chordProgressions = [
+                [[220, 261.63, 329.63], [196, 246.94, 293.66]], // Am-G
+                [[174.61, 220, 261.63], [261.63, 329.63, 392]], // F-C
+                [[146.83, 184.99, 220], [130.81, 164.81, 196]], // D-C
+                [[110, 138.59, 164.81], [220, 261.63, 329.63]]  // A-Am
+            ];
+            
+            let melodyIndex = 0;
+            let currentPattern = 0;
+            
+            function playMusicLoop() {
+                if (!musicEnabled) return;
+                
+                const currentTime = audioContext.currentTime;
+                const bassNote = bassProgression[beatCount % bassProgression.length];
+                
+                // Bass line with variation
+                if (bassNote > 0) {
+                    const bass = audioContext.createOscillator();
+                    const bassGain = audioContext.createGain();
+                    const bassFilter = audioContext.createBiquadFilter();
+                    
+                    bass.type = 'sawtooth';
+                    bass.frequency.value = bassNote;
+                    
+                    bassFilter.type = 'lowpass';
+                    bassFilter.frequency.value = 400 + (beatCount % 16) * 25; // Evolving filter
+                    bassFilter.Q.value = 8;
+                    
+                    bass.connect(bassFilter);
+                    bassFilter.connect(bassGain);
+                    bassGain.connect(musicGainNode);
+                    
+                    const volume = 0.15 + (Math.sin(beatCount * 0.1) * 0.05); // Dynamic volume
+                    bassGain.gain.setValueAtTime(0, currentTime);
+                    bassGain.gain.linearRampToValueAtTime(volume, currentTime + 0.02);
+                    bassGain.gain.exponentialRampToValueAtTime(0.01, currentTime + 0.4);
+                    
+                    bass.start(currentTime);
+                    bass.stop(currentTime + 0.4);
+                }
+                
+                // Evolving melody every 2 beats
+                if (beatCount % 2 === 0) {
+                    const pattern = melodyPatterns[currentPattern];
+                    const note = pattern[melodyIndex % pattern.length];
+                    
+                    const melody = audioContext.createOscillator();
+                    const melodyGain = audioContext.createGain();
+                    const melodyFilter = audioContext.createBiquadFilter();
+                    
+                    melody.type = beatCount % 8 < 4 ? 'square' : 'triangle'; // Timbral variation
+                    melody.frequency.value = note;
+                    
+                    melodyFilter.type = 'bandpass';
+                    melodyFilter.frequency.value = 800 + (beatCount % 20) * 40;
+                    melodyFilter.Q.value = 5;
+                    
+                    melody.connect(melodyFilter);
+                    melodyFilter.connect(melodyGain);
+                    melodyGain.connect(musicGainNode);
+                    
+                    melodyGain.gain.setValueAtTime(0, currentTime);
+                    melodyGain.gain.linearRampToValueAtTime(0.04, currentTime + 0.03);
+                    melodyGain.gain.exponentialRampToValueAtTime(0.001, currentTime + 0.15);
+                    
+                    melody.start(currentTime);
+                    melody.stop(currentTime + 0.15);
+                    
+                    melodyIndex++;
+                }
+                
+                // Chord pads every 8 beats
+                if (beatCount % 8 === 0) {
+                    const chordSet = chordProgressions[Math.floor(beatCount / 8) % chordProgressions.length];
+                    const chord = chordSet[Math.floor(beatCount / 8) % 2];
+                    
+                    chord.forEach((freq, i) => {
+                        const pad = audioContext.createOscillator();
+                        const padGain = audioContext.createGain();
+                        const padFilter = audioContext.createBiquadFilter();
+                        
+                        pad.type = 'triangle';
+                        pad.frequency.value = freq;
+                        pad.detune.value = (i - 1) * 8;
+                        
+                        padFilter.type = 'lowpass';
+                        padFilter.frequency.value = 600 + (beatCount % 32) * 20;
+                        
+                        pad.connect(padFilter);
+                        padFilter.connect(padGain);
+                        padGain.connect(musicGainNode);
+                        
+                        padGain.gain.setValueAtTime(0, currentTime);
+                        padGain.gain.linearRampToValueAtTime(0.02, currentTime + 1);
+                        padGain.gain.setValueAtTime(0.02, currentTime + 6);
+                        padGain.gain.exponentialRampToValueAtTime(0.001, currentTime + 8);
+                        
+                        pad.start(currentTime);
+                        pad.stop(currentTime + 8);
+                    });
+                }
+                
+                // Ambient sweeps and textures
+                if (beatCount % 16 === 12) {
+                    const sweep = audioContext.createOscillator();
+                    const sweepGain = audioContext.createGain();
+                    const sweepFilter = audioContext.createBiquadFilter();
+                    
+                    sweep.type = 'sine';
+                    sweep.frequency.setValueAtTime(1500 + Math.random() * 1000, currentTime);
+                    sweep.frequency.exponentialRampToValueAtTime(80 + Math.random() * 40, currentTime + 2);
+                    
+                    sweepFilter.type = 'lowpass';
+                    sweepFilter.frequency.value = 1200;
+                    
+                    sweep.connect(sweepFilter);
+                    sweepFilter.connect(sweepGain);
+                    sweepGain.connect(musicGainNode);
+                    
+                    sweepGain.gain.setValueAtTime(0.015, currentTime);
+                    sweepGain.gain.exponentialRampToValueAtTime(0.001, currentTime + 2);
+                    
+                    sweep.start(currentTime);
+                    sweep.stop(currentTime + 2);
+                }
+                
+                beatCount++;
+                
+                // Change pattern every 16 beats for variation
+                if (beatCount % 16 === 0) {
+                    currentPattern = (currentPattern + 1) % melodyPatterns.length;
+                }
+                
+                // Reset after 80 beats (20 seconds)
+                if (beatCount >= 80) {
+                    beatCount = 0;
+                }
+            }
+            
+            // Start the music loop at 120 BPM (500ms per beat)
+            playMusicLoop();
+            musicInterval = setInterval(playMusicLoop, 500);
+            
+            // Store interval ID for cleanup
+            window.musicInterval = musicInterval;
+        }
+        
+        function playSound(type) {
+            if (!audioContext || !soundsEnabled) return;
+            
+            const oscillator = audioContext.createOscillator();
+            const envelope = audioContext.createGain();
+            
+            oscillator.connect(envelope);
+            envelope.connect(soundGainNode);
+            
+            switch(type) {
+                case 'click':
+                case 'start':
+                    oscillator.type = 'square';
+                    oscillator.frequency.value = 800;
+                    envelope.gain.setValueAtTime(0.3, audioContext.currentTime);
+                    envelope.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + 0.1);
+                    break;
+                    
+                case 'land':
+                    // Multi-stage landing sound effect
+                    const landStartTime = audioContext.currentTime;
+                    
+                    // Stage 1: Engine deceleration (descending frequency)
+                    const engineDown = audioContext.createOscillator();
+                    const engineGain = audioContext.createGain();
+                    engineDown.type = 'sawtooth';
+                    engineDown.frequency.setValueAtTime(800, landStartTime);
+                    engineDown.frequency.exponentialRampToValueAtTime(200, landStartTime + 0.4);
+                    engineDown.connect(engineGain);
+                    engineGain.connect(soundGainNode);
+                    engineGain.gain.setValueAtTime(0.3, landStartTime);
+                    engineGain.gain.exponentialRampToValueAtTime(0.01, landStartTime + 0.4);
+                    engineDown.start(landStartTime);
+                    engineDown.stop(landStartTime + 0.4);
+                    
+                    // Stage 2: Landing thud (low frequency pulse)
+                    setTimeout(() => {
+                        const thud = audioContext.createOscillator();
+                        const thudGain = audioContext.createGain();
+                        thud.type = 'triangle';
+                        thud.frequency.value = 80;
+                        thud.connect(thudGain);
+                        thudGain.connect(soundGainNode);
+                        thudGain.gain.setValueAtTime(0.5, audioContext.currentTime);
+                        thudGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+                        thud.start(audioContext.currentTime);
+                        thud.stop(audioContext.currentTime + 0.2);
+                    }, 400);
+                    
+                    // Stage 3: Success chime (ascending notes)
+                    setTimeout(() => {
+                        const successNotes = [523.25, 659.25, 783.99]; // C5, E5, G5
+                        successNotes.forEach((freq, i) => {
+                            setTimeout(() => {
+                                const chime = audioContext.createOscillator();
+                                const chimeGain = audioContext.createGain();
+                                chime.type = 'sine';
+                                chime.frequency.value = freq;
+                                chime.connect(chimeGain);
+                                chimeGain.connect(soundGainNode);
+                                chimeGain.gain.setValueAtTime(0.2, audioContext.currentTime);
+                                chimeGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                                chime.start(audioContext.currentTime);
+                                chime.stop(audioContext.currentTime + 0.3);
+                            }, i * 80);
+                        });
+                    }, 600);
+                    
+                    // Stage 4: Atmospheric hiss (landing steam/dust)
+                    setTimeout(() => {
+                        const noise = audioContext.createOscillator();
+                        const noiseGain = audioContext.createGain();
+                        const noiseFilter = audioContext.createBiquadFilter();
+                        noise.type = 'sawtooth';
+                        noise.frequency.value = 150;
+                        noiseFilter.type = 'highpass';
+                        noiseFilter.frequency.value = 2000;
+                        noise.connect(noiseFilter);
+                        noiseFilter.connect(noiseGain);
+                        noiseGain.connect(soundGainNode);
+                        noiseGain.gain.setValueAtTime(0.1, audioContext.currentTime);
+                        noiseGain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.5);
+                        noise.start(audioContext.currentTime);
+                        noise.stop(audioContext.currentTime + 0.5);
+                    }, 500);
+                    break;
+                    
+                case 'achievement':
+                    // Triumphant fanfare
+                    const notes = [523.25, 659.25, 783.99]; // C, E, G
+                    notes.forEach((freq, i) => {
+                        setTimeout(() => {
+                            const osc = audioContext.createOscillator();
+                            const env = audioContext.createGain();
+                            osc.connect(env);
+                            env.connect(soundGainNode);
+                            osc.type = 'triangle';
+                            osc.frequency.value = freq;
+                            env.gain.setValueAtTime(0.4, audioContext.currentTime);
+                            env.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
+                            osc.start(audioContext.currentTime);
+                            osc.stop(audioContext.currentTime + 0.4);
+                        }, i * 100);
+                    });
+                    break;
+                    
+                case 'boost':
+                    // Jet engine sound
+                    const noise = audioContext.createOscillator();
+                    const noiseGain = audioContext.createGain();
+                    noise.connect(noiseGain);
+                    noiseGain.connect(soundGainNode);
+                    noise.type = 'sawtooth';
+                    noise.frequency.value = 100;
+                    noiseGain.gain.setValueAtTime(0.2, audioContext.currentTime);
+                    noiseGain.gain.linearRampToValueAtTime(0.4, audioContext.currentTime + 0.1);
+                    noiseGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                    noise.start(audioContext.currentTime);
+                    noise.stop(audioContext.currentTime + 0.5);
+                    break;
+            }
+        }
+        
+        function setupAudioControls() {
+            // Setup audio control buttons
+            document.getElementById('toggleMusic').addEventListener('click', () => {
+                musicEnabled = !musicEnabled;
+                document.getElementById('toggleMusic').textContent = musicEnabled ? '🎵' : '🔇';
+                if (!musicEnabled && audioContext) {
+                    // Stop the music interval
+                    if (window.musicInterval) {
+                        clearInterval(window.musicInterval);
+                        window.musicInterval = null;
+                    }
+                    // Also stop any currently playing music nodes
+                    if (musicGainNode) {
+                        musicGainNode.gain.setValueAtTime(0, audioContext.currentTime);
+                    }
+                } else if (musicEnabled && audioContext) {
+                    // Restart music if in game
+                    if (gameMode === 'space' || gameMode === 'surface') {
+                        playBackgroundMusic();
+                    }
+                }
+                if (soundsEnabled) playSound('click');
+            });
+            
+            document.getElementById('toggleSounds').addEventListener('click', () => {
+                soundsEnabled = !soundsEnabled;
+                document.getElementById('toggleSounds').textContent = soundsEnabled ? '🔊' : '🔈';
+                if (soundsEnabled) playSound('click');
+            });
+        }
+
+        function setupEventListeners() {
+            // Setup audio controls
+            setupAudioControls();
+            
+            // Keyboard controls
+            document.addEventListener('keydown', (e) => {
+                keys[e.key.toLowerCase()] = true;
+                
+                // Open weight calculator with 'C'
+                if (e.key.toLowerCase() === 'c' && gameMode === 'space') {
+                    toggleWeightCalculator();
+                }
+                
+                // Space key for landing when in range
+                if (e.key === ' ' && gameMode === 'space') {
+                    // Check if we're in range of a planet
+                    if (currentPlanet && document.getElementById('rangeIndicator').style.display === 'block') {
+                        landOnPlanet();
+                    } else if (!keys['boost']) {
+                        // Otherwise use as boost
+                        keys['boost'] = true;
+                        playSound('boost');
+                    }
+                }
+            });
+            
+            document.addEventListener('keyup', (e) => {
+                keys[e.key.toLowerCase()] = false;
+                if (e.key === ' ') {
+                    keys['boost'] = false;
+                }
+            });
+            
+            // Mouse click for planet selection
+            document.getElementById('gameCanvas').addEventListener('click', onCanvasClick);
+            
+            // Planet action buttons
+            document.getElementById('landButton').addEventListener('click', landOnPlanet);
+            document.getElementById('learnMoreButton').addEventListener('click', showMoreFacts);
+            
+            // Weight calculator
+            document.getElementById('calculateWeight').addEventListener('click', calculatePlanetWeights);
+            document.getElementById('weightInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') calculatePlanetWeights();
+            });
+            
+            // Surface view back button
+            document.getElementById('backToSpace').addEventListener('click', exitPlanetSurface);
+            
+            // Navigation controls
+            document.getElementById('flyToSun').addEventListener('click', flyBackToSun);
+            document.getElementById('resetGame').addEventListener('click', resetGame);
+            
+            // Window resize
+            window.addEventListener('resize', onWindowResize);
+        }
+        
+        // Fly spaceship back to sun
+        function flyBackToSun() {
+            if (gameMode !== 'space') return;
+            
+            playSound('click');
+            
+            // Reset spaceship position near the sun
+            spaceship.position.set(0, 2, 8);
+            velocity.set(0, 0, 0);
+            
+            // Reset camera
+            camera.position.set(0, 12, 35);
+            camera.lookAt(0, 0, 0);
+            
+            showAchievement("Returned to the Sun! ☀️");
+        }
+        
+        // Reset the entire game
+        function resetGame() {
+            playSound('click');
+            
+            // Confirm reset
+            const confirmReset = confirm(`Hi ${playerName}! Are you sure you want to start over with a new game?`);
+            
+            if (confirmReset) {
+                // Reset all game state
+                visitedPlanets.clear();
+                knowledgePoints = 0;
+                playerEarthWeight = 70;
+                currentPlanet = null;
+                gameMode = 'welcome';
+                
+                // Reset UI
+                document.getElementById('welcomeScreen').style.display = 'flex';
+                document.getElementById('gameUI').style.display = 'none';
+                document.getElementById('surfaceView').style.display = 'none';
+                document.getElementById('planetInfoBox').style.display = 'none';
+                document.getElementById('rangeIndicator').style.display = 'none';
+                document.getElementById('weightCalculator').style.display = 'none';
+                
+                // Clear name input
+                document.getElementById('playerNameInput').value = '';
+                document.getElementById('startButton').disabled = true;
+                
+                // Stop music
+                if (audioContext) {
+                    musicGainNode.gain.value = 0;
+                    if (window.musicInterval) {
+                        clearInterval(window.musicInterval);
+                        window.musicInterval = null;
+                    }
+                }
+                
+                // Update stats display
+                updateStats();
+            }
+        }
+
+        function onCanvasClick(event) {
+            if (gameMode !== 'space') return;
+            
+            const mouse = new THREE.Vector2();
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, camera);
+            
+            const intersects = raycaster.intersectObjects(planets);
+            if (intersects.length > 0) {
+                selectPlanet(intersects[0].object);
+                playSound('click');
+            }
+        }
+
+        function selectPlanet(planet) {
+            currentPlanet = planet;
+            const data = planet.userData.data;
+            
+            // Show planet info
+            document.getElementById('planetInfoBox').style.display = 'block';
+            document.getElementById('planetName').textContent = data.name;
+            document.getElementById('planetFacts').innerHTML = data.facts.map(fact => `<div>• ${fact}</div>`).join('');
+            
+            // Update button text
+            const visited = visitedPlanets.has(planet.userData.type);
+            document.getElementById('landButton').textContent = visited ? '🛸 Visit Again!' : '🛸 Land on Planet!';
+        }
+
+        function landOnPlanet() {
+            if (!currentPlanet || gameMode !== 'space') return;
+            
+            playSound('land');
+            gameMode = 'surface';
+            
+            const planetType = currentPlanet.userData.type;
+            const data = currentPlanet.userData.data;
+            
+            // Mark as visited
+            if (!visitedPlanets.has(planetType)) {
+                visitedPlanets.add(planetType);
+                knowledgePoints += 10;
+                updateStats();
+                showAchievement(`First visit to ${data.name}! +10 points!`);
+            }
+            
+            // Show surface view
+            showPlanetSurface(planetType, data);
+        }
+
+        function showPlanetSurface(planetType, data) {
+            document.getElementById('surfaceView').style.display = 'block';
+            document.getElementById('surfaceTitle').textContent = `Exploring ${data.name}`;
+            
+            // Set real planet surface image
+            const imageExtensions = {
+                'sun': 'jpg',
+                'mercury': 'jpeg', 
+                'venus': 'jpg',
+                'earth': 'jpg',
+                'mars': 'jpg',
+                'jupiter': 'png',
+                'saturn': 'jpg',
+                'uranus': 'jpg',
+                'neptune': 'jpg'
+            };
+            
+            const imageUrl = `images/planets/${planetType}.${imageExtensions[planetType]}`;
+            document.getElementById('surfaceImage').style.background = `url('${imageUrl}') center/cover, ${data.surfaceColor}`;
+            document.getElementById('surfaceImage').innerHTML = '';
+            
+            // Reset weight calculator for new planet
+            document.getElementById('surfaceWeightInput').value = '';
+            document.getElementById('surfaceWeightResult').innerHTML = '';
+            
+            // Setup mini-game quiz with random question
+            setupQuiz(data.quizzes);
+        }
+
+        function setupQuiz(quizzes) {
+            // Randomly select a quiz from the array
+            const randomQuiz = quizzes[Math.floor(Math.random() * quizzes.length)];
+            
+            document.getElementById('quizQuestion').textContent = randomQuiz.question;
+            const optionsContainer = document.getElementById('quizOptions');
+            optionsContainer.innerHTML = '';
+            
+            randomQuiz.options.forEach((option, index) => {
+                const button = document.createElement('button');
+                button.className = 'quiz-option';
+                button.textContent = option;
+                button.onclick = () => checkQuizAnswer(index, randomQuiz.correct);
+                optionsContainer.appendChild(button);
+            });
+        }
+
+        function checkQuizAnswer(selected, correct) {
+            if (selected === correct) {
+                knowledgePoints += 5;
+                updateStats();
+                showAchievement("Correct! +5 points! 🎉");
+                playSound('achievement');
+                
+                // Disable all buttons
+                document.querySelectorAll('.quiz-option').forEach(btn => {
+                    btn.disabled = true;
+                    if (btn.textContent === document.querySelectorAll('.quiz-option')[correct].textContent) {
+                        btn.style.background = '#4CAF50';
+                    }
+                });
+            } else {
+                showAchievement("Try again! 🤔");
+                playSound('click');
+            }
+        }
+
+        function exitPlanetSurface() {
+            gameMode = 'space';
+            document.getElementById('surfaceView').style.display = 'none';
+            playSound('click');
+        }
+
+        function showMoreFacts() {
+            if (!currentPlanet) return;
+            
+            const data = currentPlanet.userData.data;
+            let extraFacts = "";
+            
+            // Add extra facts based on planet
+            switch(currentPlanet.userData.type) {
+                case 'sun':
+                    extraFacts = "The Sun is 4.6 billion years old! It's so big that 1.3 million Earths could fit inside!";
+                    break;
+                case 'earth':
+                    extraFacts = "Earth is the only planet not named after a god or goddess! It's perfect for life!";
+                    break;
+                case 'jupiter':
+                    extraFacts = "Jupiter's Great Red Spot is a storm that's been raging for over 300 years!";
+                    break;
+                default:
+                    extraFacts = "Every planet in our solar system is unique and amazing!";
+            }
+            
+            showAchievement(extraFacts);
+            knowledgePoints += 2;
+            updateStats();
+        }
+
+        function toggleWeightCalculator() {
+            const calc = document.getElementById('weightCalculator');
+            calc.style.display = calc.style.display === 'none' ? 'block' : 'none';
+            playSound('click');
+        }
+
+        function calculatePlanetWeights() {
+            const weightInput = document.getElementById('weightInput');
+            const weight = parseFloat(weightInput.value);
+            
+            if (!weight || weight <= 0) {
+                showAchievement("Please enter your weight first!");
+                return;
+            }
+            
+            playerEarthWeight = weight;
+            let results = `<strong>Your weight on different planets:</strong><br>`;
+            
+            Object.keys(planetData).forEach(key => {
+                const planetWeight = (weight * planetData[key].gravity).toFixed(1);
+                results += `${planetData[key].name}: ${planetWeight} lbs<br>`;
+            });
+            
+            document.getElementById('weightResults').innerHTML = results;
+            playSound('click');
+        }
+
+        function updateStats() {
+            document.getElementById('planetsVisited').textContent = visitedPlanets.size;
+            document.getElementById('knowledgePoints').textContent = knowledgePoints;
+        }
+
+        function showAchievement(text) {
+            const popup = document.getElementById('achievementPopup');
+            document.getElementById('achievementText').textContent = text;
+            popup.style.display = 'block';
+            
+            setTimeout(() => {
+                popup.style.display = 'none';
+            }, 3000);
+        }
+
+        function updateMovement() {
+            if (gameMode !== 'space') return;
+            
+            // Smooth movement with acceleration
+            const acceleration = new THREE.Vector3();
+            const speed = keys[' '] ? boostSpeed : moveSpeed;
+            
+            if (keys['w'] || keys['arrowup']) acceleration.z -= speed;
+            if (keys['s'] || keys['arrowdown']) acceleration.z += speed;
+            if (keys['a'] || keys['arrowleft']) acceleration.x -= speed;
+            if (keys['d'] || keys['arrowright']) acceleration.x += speed;
+            if (keys['q']) acceleration.y += speed * 0.7;
+            if (keys['e']) acceleration.y -= speed * 0.7;
+            
+            // Apply acceleration
+            velocity.add(acceleration);
+            velocity.multiplyScalar(0.95); // Friction
+            
+            // Update spaceship position
+            spaceship.position.add(velocity);
+            
+            // Spaceship tilting for visual feedback
+            spaceship.rotation.z = -velocity.x * 0.3;
+            spaceship.rotation.x = velocity.z * 0.3;
+            
+            // Camera follows spaceship
+            const cameraOffset = new THREE.Vector3(0, 12, 20);
+            const desiredCameraPosition = spaceship.position.clone().add(cameraOffset);
+            camera.position.lerp(desiredCameraPosition, 0.1);
+            camera.lookAt(spaceship.position);
+            
+            // Check proximity to planets
+            checkPlanetProximity();
+        }
+
+        function checkPlanetProximity() {
+            let nearestPlanet = null;
+            let minDistance = Infinity;
+            const detectionRange = 15; // Much broader detection range
+            const landingRange = 20; // Even broader landing range
+            
+            planets.forEach(planet => {
+                const distance = spaceship.position.distanceTo(planet.position);
+                if (distance < landingRange && distance < minDistance) {
+                    minDistance = distance;
+                    nearestPlanet = planet;
+                }
+            });
+            
+            // Show range indicator if within landing range
+            if (nearestPlanet && minDistance < landingRange) {
+                const rangeIndicator = document.getElementById('rangeIndicator');
+                const planetName = nearestPlanet.userData.data.name;
+                document.getElementById('rangePlanetName').textContent = planetName;
+                
+                // Pop-up animation
+                if (rangeIndicator.style.display === 'none') {
+                    rangeIndicator.style.display = 'block';
+                    setTimeout(() => rangeIndicator.classList.add('show'), 10);
+                }
+                
+                currentPlanet = nearestPlanet;
+                
+                // Also show planet info if within detection range
+                if (minDistance < detectionRange) {
+                    selectPlanet(nearestPlanet);
+                    // Add green glow to planet name when in range
+                    document.getElementById('planetName').classList.add('in-range');
+                }
+            } else {
+                const rangeIndicator = document.getElementById('rangeIndicator');
+                rangeIndicator.classList.remove('show');
+                setTimeout(() => rangeIndicator.style.display = 'none', 400);
+                
+                if (minDistance > detectionRange) {
+                    document.getElementById('planetInfoBox').style.display = 'none';
+                    document.getElementById('planetName').classList.remove('in-range');
+                    currentPlanet = null;
+                }
+            }
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            if (gameMode === 'space') {
+                // Update movement
+                updateMovement();
+                
+                // Rotate planets
+                planets.forEach((planet, index) => {
+                    planet.rotation.y += 0.002 + (index * 0.0005);
+                });
+                
+                // Particle effects for thrusters
+                if (velocity.length() > 0.01) {
+                    // Add particle effect (simplified)
+                    spaceship.children[2].material.emissiveIntensity = 1;
+                    spaceship.children[3].material.emissiveIntensity = 1;
+                } else {
+                    spaceship.children[2].material.emissiveIntensity = 0.3;
+                    spaceship.children[3].material.emissiveIntensity = 0.3;
+                }
+            }
+            
+            renderer.render(scene, camera);
+        }
+
+        // Start the game
+        init();
+    </script>
+</body>
+</html>

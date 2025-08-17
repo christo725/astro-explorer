@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Space Explorer - Planet Adventures</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            background: #000;
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        #gameCanvas {
+            display: block;
+            background: linear-gradient(135deg, #0a0a2e 0%, #16213e 50%, #1a1a3a 100%);
+        }
+
+        .ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        .score-box {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.9);
+            padding: 15px;
+            border-radius: 15px;
+            border: 3px solid #ff6b6b;
+            pointer-events: auto;
+            font-size: 18px;
+            text-align: center;
+        }
+
+        .info-box {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 300px;
+            background: rgba(0,0,0,0.9);
+            padding: 20px;
+            border-radius: 20px;
+            border: 3px solid #4ecdc4;
+            pointer-events: auto;
+            text-align: center;
+        }
+
+        .planet-name {
+            color: #4ecdc4;
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+
+        .planet-fact {
+            font-size: 16px;
+            line-height: 1.4;
+            color: #ffffff;
+            margin-bottom: 15px;
+        }
+
+        .enter-button {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .enter-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(255,107,107,0.8);
+        }
+
+        .enter-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .battle-ui {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.9);
+            padding: 20px;
+            border-radius: 20px;
+            border: 3px solid #ffff00;
+            display: none;
+            text-align: center;
+            min-width: 400px;
+        }
+
+        .health-bar {
+            width: 100%;
+            height: 20px;
+            background: #333;
+            border-radius: 10px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+
+        .health-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b6b, #ff4444);
+            transition: width 0.5s ease;
+            border-radius: 10px;
+        }
+
+        .player-health-fill {
+            background: linear-gradient(90deg, #4ecdc4, #44ccaa);
+        }
+
+        .battle-button {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            border: none;
+            padding: 10px 15px;
+            border-radius: 15px;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .battle-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(255,107,107,0.6);
+        }
+
+        .instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            background: rgba(0,0,0,0.8);
+            padding: 15px 25px;
+            border-radius: 20px;
+            font-size: 16px;
+            border: 2px solid #00ff00;
+        }
+
+        .victory-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #ff6b6b, #4ecdc4, #ffff00);
+            padding: 40px;
+            border-radius: 25px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            display: none;
+            box-shadow: 0 0 60px rgba(255,107,107,0.8);
+            z-index: 200;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .pulse {
+            animation: pulse 2s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    
+    <div class="ui-overlay">
+        <div class="score-box">
+            <div>🚀 Explorer Level</div>
+            <div style="font-size: 24px;">⭐ <span id="visited-count">0</span>/7</div>
+            <div id="boss-count">👾 Bosses: 0/7</div>
+        </div>
+        
+        <div class="info-box">
+            <div class="planet-info" id="planet-info">
+                <div class="planet-name">3D Space Explorer! 🚀</div>
+                <div class="planet-fact">Fly in 3D space to discover planets. Enter them to fight cosmic bosses!</div>
+                <button class="enter-button" id="enter-planet" disabled>Enter Planet</button>
+            </div>
+        </div>
+        
+        <div class="battle-ui" id="battle-ui">
+            <div id="boss-name">Cosmic Boss</div>
+            <div class="health-bar">
+                <div class="health-fill" id="boss-health" style="width: 100%;"></div>
+            </div>
+            <div>Your Health:</div>
+            <div class="health-bar">
+                <div class="health-fill player-health-fill" id="player-health" style="width: 100%;"></div>
+            </div>
+            <div style="margin-top: 15px;">
+                <button class="battle-button" onclick="attack('laser')">🔫 Laser Blast</button>
+                <button class="battle-button" onclick="attack('missile')">🚀 Missile</button>
+                <button class="battle-button" onclick="attack('shield')">🛡️ Shield</button>
+                <button class="battle-button" onclick="exitPlanet()">🌌 Exit Planet</button>
+            </div>
+            <div id="battle-log" style="margin-top: 10px; font-size: 14px;"></div>
+        </div>
+        
+        <div class="instructions" id="instructions">
+            Use WASD or Arrow Keys to fly in 3D space • Click planets to learn • Enter to battle! 🌟
+        </div>
+        
+        <div class="victory-message" id="victory">
+            🎉 ULTIMATE SPACE HERO! 🎉<br>
+            You've conquered the entire solar system!<br>
+            <div style="font-size: 18px; margin-top: 10px;">All planets explored and bosses defeated!</div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Game state
+        let scene, camera, renderer, controls;
+        let planets = [];
+        let sun, astronaut;
+        let currentPlanet = null;
+        let inBattle = false;
+        let gameMode = 'space'; // 'space' or 'planet'
+        
+        // Player stats
+        let visitedPlanets = new Set();
+        let defeatedBosses = new Set();
+        let playerHealth = 100;
+        let currentBoss = null;
+        
+        // Input
+        let keys = {};
+        const moveSpeed = 0.5;
+        const rotationSpeed = 0.02;
+        
+        // Planet data with bosses
+        const planetData = {
+            sun: {
+                name: "The Sun ☀️",
+                fact: "The Sun is a giant ball of hot gas that gives us light and heat!",
+                color: 0xffff00,
+                size: 3,
+                position: [0, 0, 0],
+                boss: {
+                    name: "Solar Phoenix 🔥",
+                    health: 150,
+                    attacks: ["Solar Flare", "Heat Wave", "Corona Blast"]
+                }
+            },
+            mercury: {
+                name: "Mercury ☿",
+                fact: "Mercury is super close to the Sun and has extreme temperatures!",
+                color: 0x8c7853,
+                size: 0.8,
+                position: [6, 0, 0],
+                boss: {
+                    name: "Crater Guardian 🌑",
+                    health: 80,
+                    attacks: ["Rock Throw", "Heat Blast", "Speed Rush"]
+                }
+            },
+            venus: {
+                name: "Venus ♀",
+                fact: "Venus is the hottest planet with thick, toxic clouds!",
+                color: 0xffc649,
+                size: 1.2,
+                position: [8, 2, -3],
+                boss: {
+                    name: "Cloud Demon ☁️",
+                    health: 100,
+                    attacks: ["Acid Rain", "Toxic Storm", "Lightning Strike"]
+                }
+            },
+            earth: {
+                name: "Earth 🌍",
+                fact: "Earth is our home planet with water and life!",
+                color: 0x6b93d6,
+                size: 1.3,
+                position: [10, -1, 2],
+                boss: {
+                    name: "Ocean Titan 🌊",
+                    health: 120,
+                    attacks: ["Tidal Wave", "Hurricane", "Earthquake"]
+                }
+            },
+            mars: {
+                name: "Mars ♂",
+                fact: "Mars is the red planet with the biggest volcano!",
+                color: 0xcd5c5c,
+                size: 1.1,
+                position: [12, 1, -4],
+                boss: {
+                    name: "Iron Golem ⚔️",
+                    health: 110,
+                    attacks: ["Rust Storm", "Volcano Eruption", "Metal Crush"]
+                }
+            },
+            jupiter: {
+                name: "Jupiter ♃",
+                fact: "Jupiter is HUGE - the biggest planet with over 80 moons!",
+                color: 0xd2691e,
+                size: 2.5,
+                position: [16, -2, 1],
+                boss: {
+                    name: "Storm King ⛈️",
+                    health: 180,
+                    attacks: ["Great Red Storm", "Lightning Barrage", "Wind Tornado"]
+                }
+            },
+            saturn: {
+                name: "Saturn ♄",
+                fact: "Saturn has amazing rings made of ice and rocks!",
+                color: 0xfad5a5,
+                size: 2.2,
+                position: [20, 0, -2],
+                boss: {
+                    name: "Ring Master 💫",
+                    health: 160,
+                    attacks: ["Ring Slice", "Ice Shard", "Cosmic Spin"]
+                }
+            }
+        };
+        
+        // Initialize 3D scene
+        function init() {
+            // Create scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x000011);
+            
+            // Create camera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 5, 15);
+            
+            // Create renderer
+            const canvas = document.getElementById('gameCanvas');
+            renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            
+            // Create stars
+            createStars();
+            
+            // Create sun and planets
+            createCelestialBodies();
+            
+            // Create astronaut
+            createAstronaut();
+            
+            // Add lighting
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.3);
+            scene.add(ambientLight);
+            
+            const sunLight = new THREE.PointLight(0xffff88, 2, 100);
+            sunLight.position.set(0, 0, 0);
+            sunLight.castShadow = true;
+            scene.add(sunLight);
+            
+            // Event listeners
+            setupEventListeners();
+            
+            // Start game loop
+            animate();
+        }
+        
+        function createStars() {
+            const starsGeometry = new THREE.BufferGeometry();
+            const starsCount = 1000;
+            const positions = new Float32Array(starsCount * 3);
+            
+            for (let i = 0; i < starsCount * 3; i += 3) {
+                positions[i] = (Math.random() - 0.5) * 200;
+                positions[i + 1] = (Math.random() - 0.5) * 200;
+                positions[i + 2] = (Math.random() - 0.5) * 200;
+            }
+            
+            starsGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const starsMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.5 });
+            const stars = new THREE.Points(starsGeometry, starsMaterial);
+            scene.add(stars);
+        }
+        
+        function createCelestialBodies() {
+            // Create planets
+            Object.keys(planetData).forEach(key => {
+                const data = planetData[key];
+                const geometry = new THREE.SphereGeometry(data.size, 32, 32);
+                const material = new THREE.MeshPhongMaterial({ color: data.color });
+                const planet = new THREE.Mesh(geometry, material);
+                planet.position.set(...data.position);
+                planet.userData = { type: key, data: data };
+                planet.castShadow = true;
+                planet.receiveShadow = true;
+                
+                // Add glow for sun
+                if (key === 'sun') {
+                    sun = planet;
+                    const glowGeometry = new THREE.SphereGeometry(data.size * 1.2, 32, 32);
+                    const glowMaterial = new THREE.MeshBasicMaterial({ 
+                        color: 0xffff00, 
+                        transparent: true, 
+                        opacity: 0.3 
+                    });
+                    const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+                    planet.add(glow);
+                }
+                
+                scene.add(planet);
+                planets.push(planet);
+            });
+        }
+        
+        function createAstronaut() {
+            const geometry = new THREE.ConeGeometry(0.3, 1, 8);
+            const material = new THREE.MeshPhongMaterial({ color: 0x4ecdc4 });
+            astronaut = new THREE.Mesh(geometry, material);
+            astronaut.position.set(0, 5, 15);
+            scene.add(astronaut);
+            
+            // Add thruster particles
+            const thrusterGeometry = new THREE.SphereGeometry(0.1, 8, 8);
+            const thrusterMaterial = new THREE.MeshBasicMaterial({ color: 0xff6b6b });
+            const thruster = new THREE.Mesh(thrusterGeometry, thrusterMaterial);
+            thruster.position.set(0, -0.7, 0);
+            astronaut.add(thruster);
+        }
+        
+        function setupEventListeners() {
+            // Keyboard controls
+            document.addEventListener('keydown', (e) => {
+                keys[e.key.toLowerCase()] = true;
+                
+                if (e.key === ' ' || e.key === 'Enter') {
+                    e.preventDefault();
+                    if (currentPlanet && !inBattle) {
+                        enterPlanet();
+                    }
+                }
+            });
+            
+            document.addEventListener('keyup', (e) => {
+                keys[e.key.toLowerCase()] = false;
+            });
+            
+            // Mouse controls for planet interaction
+            canvas.addEventListener('click', onMouseClick);
+            
+            // Enter planet button
+            document.getElementById('enter-planet').addEventListener('click', enterPlanet);
+            
+            // Window resize
+            window.addEventListener('resize', onWindowResize);
+        }
+        
+        function onMouseClick(event) {
+            if (inBattle) return;
+            
+            const mouse = new THREE.Vector2();
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, camera);
+            
+            const intersects = raycaster.intersectObjects(planets);
+            if (intersects.length > 0) {
+                const planet = intersects[0].object;
+                selectPlanet(planet);
+            }
+        }
+        
+        function selectPlanet(planet) {
+            const data = planet.userData.data;
+            const planetType = planet.userData.type;
+            
+            currentPlanet = planet;
+            
+            // Update info panel
+            document.getElementById('planet-info').innerHTML = `
+                <div class="planet-name">${data.name}</div>
+                <div class="planet-fact">${data.fact}</div>
+                <div style="margin-top: 10px; font-size: 14px;">
+                    Boss: ${data.boss.name}<br>
+                    ${defeatedBosses.has(planetType) ? '✅ Boss Defeated!' : '⚔️ Boss Waiting!'}
+                </div>
+                <button class="enter-button" id="enter-planet" onclick="enterPlanet()">
+                    ${visitedPlanets.has(planetType) ? 'Re-enter Planet' : 'Enter Planet'}
+                </button>
+            `;
+        }
+        
+        function updateMovement() {
+            if (inBattle) return;
+            
+            const direction = new THREE.Vector3();
+            
+            // WASD or Arrow key movement
+            if (keys['w'] || keys['arrowup']) direction.z -= 1;
+            if (keys['s'] || keys['arrowdown']) direction.z += 1;
+            if (keys['a'] || keys['arrowleft']) direction.x -= 1;
+            if (keys['d'] || keys['arrowright']) direction.x += 1;
+            if (keys['q']) direction.y += 1; // Up
+            if (keys['e']) direction.y -= 1; // Down
+            
+            if (direction.length() > 0) {
+                direction.normalize();
+                direction.multiplyScalar(moveSpeed);
+                
+                astronaut.position.add(direction);
+                camera.position.add(direction);
+                
+                // Add rotation for movement feel
+                astronaut.rotation.z = Math.sin(Date.now() * 0.01) * 0.1;
+                
+                // Check proximity to planets
+                checkPlanetProximity();
+            }
+        }
+        
+        function checkPlanetProximity() {
+            let nearPlanet = null;
+            let minDistance = Infinity;
+            
+            planets.forEach(planet => {
+                const distance = astronaut.position.distanceTo(planet.position);
+                if (distance < 5 && distance < minDistance) {
+                    minDistance = distance;
+                    nearPlanet = planet;
+                }
+            });
+            
+            if (nearPlanet && nearPlanet !== currentPlanet) {
+                selectPlanet(nearPlanet);
+            }
+        }
+        
+        function enterPlanet() {
+            if (!currentPlanet || inBattle) return;
+            
+            const planetType = currentPlanet.userData.type;
+            const data = currentPlanet.userData.data;
+            
+            visitedPlanets.add(planetType);
+            updateScore();
+            
+            // Start battle
+            startBattle(data.boss, planetType);
+        }
+        
+        function startBattle(bossData, planetType) {
+            inBattle = true;
+            gameMode = 'planet';
+            
+            // Hide space UI
+            document.getElementById('instructions').style.display = 'none';
+            
+            // Show battle UI
+            const battleUI = document.getElementById('battle-ui');
+            battleUI.style.display = 'block';
+            
+            // Setup battle
+            currentBoss = {
+                ...bossData,
+                currentHealth: bossData.health,
+                planetType: planetType
+            };
+            
+            playerHealth = 100;
+            
+            document.getElementById('boss-name').textContent = bossData.name;
+            updateHealthBars();
+            
+            document.getElementById('battle-log').innerHTML = 
+                `You've entered ${planetData[planetType].name}! ${bossData.name} appears!`;
+        }
+        
+        function attack(type) {
+            if (!inBattle || !currentBoss) return;
+            
+            let damage = 0;
+            let message = "";
+            
+            switch(type) {
+                case 'laser':
+                    damage = Math.random() * 25 + 15; // 15-40 damage
+                    message = `🔫 Laser blast hits for ${Math.round(damage)} damage!`;
+                    break;
+                case 'missile':
+                    damage = Math.random() * 40 + 20; // 20-60 damage
+                    message = `🚀 Missile strikes for ${Math.round(damage)} damage!`;
+                    break;
+                case 'shield':
+                    const heal = Math.random() * 20 + 10; // 10-30 heal
+                    playerHealth = Math.min(100, playerHealth + heal);
+                    message = `🛡️ Shield activated! Healed ${Math.round(heal)} HP!`;
+                    break;
+            }
+            
+            if (type !== 'shield') {
+                currentBoss.currentHealth -= damage;
+            }
+            
+            updateHealthBars();
+            updateBattleLog(message);
+            
+            // Check if boss is defeated
+            if (currentBoss.currentHealth <= 0) {
+                setTimeout(() => bossDefeated(), 1000);
+                return;
+            }
+            
+            // Boss counter-attack
+            setTimeout(bossAttack, 1500);
+        }
+        
+        function bossAttack() {
+            if (!currentBoss || currentBoss.currentHealth <= 0) return;
+            
+            const attackIndex = Math.floor(Math.random() * currentBoss.attacks.length);
+            const attackName = currentBoss.attacks[attackIndex];
+            const damage = Math.random() * 20 + 10; // 10-30 damage
+            
+            playerHealth -= damage;
+            playerHealth = Math.max(0, playerHealth);
+            
+            updateHealthBars();
+            updateBattleLog(`👾 ${currentBoss.name} uses ${attackName} for ${Math.round(damage)} damage!`);
+            
+            // Check if player is defeated
+            if (playerHealth <= 0) {
+                setTimeout(playerDefeated, 1000);
+            }
+        }
+        
+        function bossDefeated() {
+            defeatedBosses.add(currentBoss.planetType);
+            updateBattleLog(`🎉 ${currentBoss.name} defeated! Planet conquered!`);
+            updateScore();
+            
+            setTimeout(() => {
+                exitPlanet();
+                
+                // Check if all bosses defeated
+                if (defeatedBosses.size === 7) {
+                    showVictory();
+                }
+            }, 2000);
+        }
+        
+        function playerDefeated() {
+            updateBattleLog(`💀 You were defeated! Try again!`);
+            playerHealth = 100;
+            setTimeout(exitPlanet, 2000);
+        }
+        
+        function exitPlanet() {
+            inBattle = false;
+            gameMode = 'space';
+            currentBoss = null;
+            
+            // Hide battle UI
+            document.getElementById('battle-ui').style.display = 'none';
+            
+            // Show space UI
+            document.getElementById('instructions').style.display = 'block';
+        }
+        
+        function updateHealthBars() {
+            if (currentBoss) {
+                const bossHealthPercent = (currentBoss.currentHealth / currentBoss.health) * 100;
+                document.getElementById('boss-health').style.width = Math.max(0, bossHealthPercent) + '%';
+            }
+            
+            document.getElementById('player-health').style.width = Math.max(0, playerHealth) + '%';
+        }
+        
+        function updateBattleLog(message) {
+            const log = document.getElementById('battle-log');
+            log.innerHTML = message;
+        }
+        
+        function updateScore() {
+            document.getElementById('visited-count').textContent = visitedPlanets.size;
+            document.getElementById('boss-count').textContent = `👾 Bosses: ${defeatedBosses.size}/7`;
+        }
+        
+        function showVictory() {
+            const victory = document.getElementById('victory');
+            victory.style.display = 'block';
+            victory.classList.add('pulse');
+            
+            setTimeout(() => {
+                victory.style.display = 'none';
+                victory.classList.remove('pulse');
+            }, 5000);
+        }
+        
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Update movement
+            updateMovement();
+            
+            // Rotate planets
+            planets.forEach((planet, index) => {
+                planet.rotation.y += 0.01 + (index * 0.002);
+                if (planet === sun) {
+                    planet.rotation.y += 0.005; // Sun spins faster
+                }
+            });
+            
+            // Update camera to follow astronaut
+            const targetPosition = new THREE.Vector3();
+            targetPosition.copy(astronaut.position);
+            targetPosition.add(new THREE.Vector3(0, 3, 5));
+            
+            camera.position.lerp(targetPosition, 0.05);
+            camera.lookAt(astronaut.position);
+            
+            renderer.render(scene, camera);
+        }
+        
+        // Initialize the game
+        init();
+        console.log("🚀 3D Space Explorer with Boss Battles Ready!");
+    </script>
+</body>
+</html>
